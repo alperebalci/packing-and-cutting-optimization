@@ -1,0 +1,16 @@
+schema_version: 1
+repository: packing-and-cutting-optimization
+role: umbrella
+axis: problem-class
+area: packing-cutting
+status: active
+owner: jorsacademy
+projects:
+  - bin-packing-milp-pulp-visualization
+  - bin-packing-optimization-python
+  - miter-aware-cutting-stock-milp
+  - steel-plate-cutting-optimization-milp
+conventions:
+  provenance_records: true
+  reproducibility_expected: true
+  benchmark_assumptions_documented: true
