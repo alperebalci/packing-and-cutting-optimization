@@ -15,7 +15,7 @@ This repository is the primary umbrella repository for this Jors Academy researc
 Each consolidated project keeps its own files and a `SOURCE_REPOSITORY.md` provenance record. The snapshot preserves the source repository's default-branch files at consolidation time; repository-level history and metadata remain separate from the snapshot.
 <!-- portfolio-umbrella:end -->
 
-A reproducible Operations Research implementation of **column generation** for the one-dimensional cutting-stock problem. The project exposes the restricted master problem, demand dual prices, knapsack pricing problem, reduced costs, stopping rule, and the important distinction between solving the LP relaxation and proving integer optimality.
+A reproducible Operations Research implementation of **column generation** and an exact **arc-flow formulation** for the one-dimensional cutting-stock problem. The project exposes the restricted master problem, demand dual prices, knapsack pricing problem, reduced costs, stopping rule, and the important distinction between solving the LP relaxation and proving integer optimality.
 
 ## Problem
 
@@ -104,6 +104,22 @@ full enumerated integer optimum   = 2
 
 The LP pricing loop has converged, yet a pattern needed for the best integer solution never had negative LP reduced cost. Exact large-scale integer column-generation methods therefore require machinery such as **branch-and-price** rather than simply rounding or integerizing the final restricted master.
 
+## Exact arc-flow formulation
+
+The repository also implements a compact integer **arc-flow** model. Nodes represent used stock length from `0` to `L`. Item arcs advance by an item length, one-unit loss arcs represent trim waste, and a feedback arc from `L` to `0` closes each source-to-sink path. Integer circulation on that feedback arc is therefore the number of stock rolls used.
+
+The model enforces flow conservation at every capacity node and aggregate demand coverage for every item type. It does not enumerate cutting patterns explicitly; after optimization, the integral forward flow is decomposed into roll-level patterns for inspection.
+
+```python
+from cutting_stock import demo_instance, solve_arc_flow
+
+solution = solve_arc_flow(demo_instance())
+print(solution.rolls_used)
+print(solution.patterns)
+```
+
+This formulation is pseudo-polynomial in the integer stock length, so it is most appropriate as an exact benchmark for moderate capacities rather than a universal replacement for column generation. It is especially useful here because it provides an independent integer formulation against which the generated-column model can be checked.
+
 ## Small-instance verification
 
 For the synthetic demo, every feasible pattern is also enumerated after column generation. This is deliberately used only as a benchmark. The automated checks compare
@@ -120,7 +136,7 @@ item lengths:  (20, 45, 50, 55)
 demands:       (48, 35, 24, 10)
 ```
 
-With the deterministic implementation, column generation starts from four single-item patterns, generates two mixed patterns, and converges to an LP objective of approximately `39.583333`. The restricted integer master and full enumerated integer model both use `40` rolls on this instance.
+With the deterministic implementation, column generation starts from four single-item patterns, generates two mixed patterns, and converges to an LP objective of approximately `39.583333`. The restricted integer master, full enumerated integer model, and arc-flow formulation all use `40` rolls on this instance.
 
 These values are verification results for this small synthetic instance, not claims about computational performance on industrial cutting-stock benchmarks.
 
@@ -133,6 +149,7 @@ These values are verification results for this small synthetic instance, not cla
 ├── src/cutting_stock/
 │   ├── __init__.py
 │   ├── __main__.py
+│   ├── arc_flow.py
 │   ├── column_generation.py
 │   ├── data.py
 │   ├── experiment.py
@@ -140,6 +157,7 @@ These values are verification results for this small synthetic instance, not cla
 │   ├── patterns.py
 │   └── pricing.py
 ├── tests/
+│   ├── test_arc_flow.py
 │   ├── test_data_patterns.py
 │   ├── test_experiment_cli.py
 │   ├── test_master_column_generation.py
@@ -169,7 +187,7 @@ or
 python examples/run_demo.py
 ```
 
-The JSON output reports the LP objective, number of generated columns, final reduced cost, full-pattern LP verification, restricted and full integer objectives, selected patterns, and the full column-generation iteration trace.
+The JSON output reports the LP objective, number of generated columns, final reduced cost, full-pattern LP verification, restricted and full integer objectives, the independent arc-flow integer objective and patterns, selected generated-column patterns, and the full column-generation iteration trace.
 
 ## Tests
 
@@ -177,7 +195,7 @@ The JSON output reports the LP objective, number of generated columns, final red
 python -m pytest
 ```
 
-The suite verifies pattern feasibility and enumeration, dynamic-programming pricing against brute-force pattern enumeration, monotone restricted-master improvement, LP convergence, absence of negative reduced-cost columns at termination, agreement with the full LP, integer-master behavior, the integer-optimality counterexample, and CLI output.
+The suite verifies pattern feasibility and enumeration, dynamic-programming pricing against brute-force pattern enumeration, monotone restricted-master improvement, LP convergence, absence of negative reduced-cost columns at termination, agreement with the full LP, integer-master behavior, arc-flow agreement with the full integer optimum on the demo, the integer-optimality counterexample, and CLI output.
 
 GitHub Actions runs package installation, bytecode compilation, and the complete test suite on Python 3.10 and 3.12.
 
@@ -190,11 +208,13 @@ GitHub Actions runs package installation, bytecode compilation, and the complete
 - Full pattern enumeration appears only in tests and verification utilities. It is not used by the column-generation loop.
 - A restricted integer master can be useful operationally, but equality with the true integer optimum must not be assumed.
 - Branch-and-price is the natural exact extension when integer optimality is required without explicit enumeration of all columns.
+- Arc-flow provides an alternative exact formulation with pseudo-polynomial dependence on stock capacity; graph compression becomes important for larger industrial instances.
 
 ## References
 
 - P. C. Gilmore and R. E. Gomory, *A Linear Programming Approach to the Cutting-Stock Problem*, Operations Research 9(6), 849-859, 1961. https://doi.org/10.1287/opre.9.6.849
 - P. C. Gilmore and R. E. Gomory, *A Linear Programming Approach to the Cutting Stock Problem—Part II*, Operations Research 11(6), 863-888, 1963. https://doi.org/10.1287/opre.11.6.863
+- F. Brandão and J. P. Pedroso, *Bin Packing and Related Problems: General Arc-flow Formulation with Graph Compression*, Computers & Operations Research 69, 56-67, 2016.
 - SciPy documentation, `scipy.optimize.linprog`: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
 - SciPy documentation, `scipy.optimize.milp`: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html
 

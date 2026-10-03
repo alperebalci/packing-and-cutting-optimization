@@ -11,6 +11,8 @@ def test_demo_verification_metrics():
     assert result["verification"]["lp_objective_difference"] < 1e-8
     assert result["verification"]["restricted_integer_objective"] == 40.0
     assert result["verification"]["full_integer_objective"] == 40.0
+    assert result["verification"]["arc_flow_integer_objective"] == 40
+    assert result["verification"]["arc_flow_matches_full_integer"]
 
 
 def test_cli_outputs_json():
@@ -22,3 +24,4 @@ def test_cli_outputs_json():
     )
     payload = json.loads(completed.stdout)
     assert payload["column_generation"]["converged"] is True
+    assert payload["verification"]["arc_flow_matches_full_integer"] is True
