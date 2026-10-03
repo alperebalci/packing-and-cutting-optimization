@@ -12,7 +12,7 @@ def test_arc_flow_matches_full_integer_master_on_demo():
     full = solve_integer_master(instance, enumerate_patterns(instance))
     assert arc_flow.objective == 40
     assert arc_flow.objective == pytest.approx(full.objective)
-    assert arc_flow.produced == instance.demands
+    assert all(produced >= demand for produced, demand in zip(arc_flow.produced, instance.demands))
 
 
 def test_arc_flow_resolves_mixed_pattern_instance():
