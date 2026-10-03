@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .arc_flow import solve_arc_flow
 from .column_generation import run_column_generation
 from .data import demo_instance
 from .master import solve_integer_master, solve_master_lp
@@ -28,6 +29,7 @@ def run_demo(tolerance: float = 1e-9, max_iterations: int = 100) -> dict:
     all_patterns = enumerate_patterns(instance)
     full_lp = solve_master_lp(instance, all_patterns)
     full_integer = solve_integer_master(instance, all_patterns)
+    arc_flow = solve_arc_flow(instance)
 
     return {
         "instance": {
@@ -51,6 +53,13 @@ def run_demo(tolerance: float = 1e-9, max_iterations: int = 100) -> dict:
             "restricted_integer_objective": restricted_integer.objective,
             "full_integer_objective": full_integer.objective,
             "restricted_integer_gap": restricted_integer.objective - full_integer.objective,
+            "arc_flow_integer_objective": arc_flow.objective,
+            "arc_flow_matches_full_integer": abs(arc_flow.objective - full_integer.objective) < 1e-8,
+        },
+        "arc_flow": {
+            "rolls_used": arc_flow.rolls_used,
+            "produced": list(arc_flow.produced),
+            "patterns": [list(pattern) for pattern in arc_flow.patterns],
         },
         "selected_restricted_integer_patterns": _selected(
             list(cg.patterns), restricted_integer.usage, instance
